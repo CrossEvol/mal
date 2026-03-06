@@ -238,8 +238,6 @@ class MalBuiltin extends MalCallable {
   }
 }
 
-typedef MalType EvalFun(MalType ast, Env env);
-
 class MalClosure extends MalCallable {
   final List<MalSymbol> params;
   final MalType ast;
