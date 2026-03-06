@@ -1,0 +1,6 @@
+[submodule "impls/zig0.16dev/libs/linenoise"]
+	path = impls/zig0.16dev/libs/linenoise
+	url = https://github.com/antirez/linenoise.git
+[submodule "impls/zig0.16dev/libs/PCREz"]
+	path = impls/zig0.16dev/libs/PCREz
+	url = https://github.com/CrossEvol/PCREz.git

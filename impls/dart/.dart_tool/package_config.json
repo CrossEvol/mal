@@ -10,7 +10,5 @@
   ],
   "generator": "pub",
   "generatorVersion": "3.10.4",
-  "flutterRoot": "file:///C:/Data/AndroidStudio/flutter/flutter_windows_3.38.5-stable",
-  "flutterVersion": "3.38.5",
-  "pubCache": "file:///D:/PubDev/Cache"
+  "pubCache": "file:///home/rootomf/.pub-cache"
 }
