@@ -1,3 +1,5 @@
 name: mal
-author: Harry Terkelsen <harry@terkelsen.io>
 version: 0.0.1
+
+environment:
+  sdk: ^3.10.0

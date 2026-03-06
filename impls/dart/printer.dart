@@ -1,17 +1,19 @@
 import 'types.dart';
 
-String pr_str(MalType data, {bool print_readably: true}) {
+String pr_str(MalType data, {bool print_readably = true}) {
   if (data is MalSymbol) {
     return data.value;
   } else if (data is MalInt) {
     return '${data.value}';
   } else if (data is MalList) {
-    var printedElements =
-        data.elements.map((e) => pr_str(e, print_readably: print_readably));
+    var printedElements = data.elements.map(
+      (e) => pr_str(e, print_readably: print_readably),
+    );
     return '(${printedElements.join(" ")})';
   } else if (data is MalVector) {
-    var printedElements =
-        data.elements.map((e) => pr_str(e, print_readably: print_readably));
+    var printedElements = data.elements.map(
+      (e) => pr_str(e, print_readably: print_readably),
+    );
     return '[${printedElements.join(" ")}]';
   } else if (data is MalHashMap) {
     var printedElements = <String>[];

@@ -8,35 +8,48 @@ import 'types.dart';
 final Env replEnv = new Env();
 
 void setupEnv() {
-  replEnv.set('+', new MalBuiltin((List<MalType> args) {
-    var a = args[0] as MalInt;
-    var b = args[1] as MalInt;
-    return new MalInt(a.value + b.value);
-  }));
-  replEnv.set('-', new MalBuiltin((List<MalType> args) {
-    var a = args[0] as MalInt;
-    var b = args[1] as MalInt;
-    return new MalInt(a.value - b.value);
-  }));
-  replEnv.set('*', new MalBuiltin((List<MalType> args) {
-    var a = args[0] as MalInt;
-    var b = args[1] as MalInt;
-    return new MalInt(a.value * b.value);
-  }));
-  replEnv.set('/', new MalBuiltin((List<MalType> args) {
-    var a = args[0] as MalInt;
-    var b = args[1] as MalInt;
-    return new MalInt(a.value ~/ b.value);
-  }));
+  replEnv.set(
+    '+',
+    new MalBuiltin((List<MalType> args) {
+      var a = args[0] as MalInt;
+      var b = args[1] as MalInt;
+      return new MalInt(a.value + b.value);
+    }),
+  );
+  replEnv.set(
+    '-',
+    new MalBuiltin((List<MalType> args) {
+      var a = args[0] as MalInt;
+      var b = args[1] as MalInt;
+      return new MalInt(a.value - b.value);
+    }),
+  );
+  replEnv.set(
+    '*',
+    new MalBuiltin((List<MalType> args) {
+      var a = args[0] as MalInt;
+      var b = args[1] as MalInt;
+      return new MalInt(a.value * b.value);
+    }),
+  );
+  replEnv.set(
+    '/',
+    new MalBuiltin((List<MalType> args) {
+      var a = args[0] as MalInt;
+      var b = args[1] as MalInt;
+      return new MalInt(a.value ~/ b.value);
+    }),
+  );
 }
 
 MalType READ(String x) => reader.read_str(x);
 
 MalType EVAL(MalType ast, Env env) {
   var dbgeval = env.get("DEBUG-EVAL");
-  if (dbgeval != null && !(dbgeval is MalNil)
-      && !(dbgeval is MalBool && dbgeval.value == false)) {
-      stdout.writeln("EVAL: ${printer.pr_str(ast)}");
+  if (dbgeval != null &&
+      !(dbgeval is MalNil) &&
+      !(dbgeval is MalBool && dbgeval.value == false)) {
+    stdout.writeln("EVAL: ${printer.pr_str(ast)}");
   }
 
   if (ast is MalSymbol) {
@@ -52,47 +65,50 @@ MalType EVAL(MalType ast, Env env) {
   } else if (ast is MalHashMap) {
     var newMap = new Map<MalType, MalType>.from(ast.value);
     for (var key in newMap.keys) {
-      newMap[key] = EVAL(newMap[key], env);
+      newMap[key] = EVAL(newMap[key]!, env);
     }
     return new MalHashMap(newMap);
   } else {
     return ast;
   }
-    // ast is a list. todo: indent left.
-    if ((ast as MalList).elements.isEmpty) {
-      return ast;
-    } else {
-      var list = ast as MalList;
-      if (list.elements.first is MalSymbol) {
-        var symbol = list.elements.first as MalSymbol;
-        var args = list.elements.sublist(1);
-        if (symbol.value == "def!") {
-          MalSymbol key = args.first;
-          MalType value = EVAL(args[1], env);
-          env.set(key.value, value);
-          return value;
-        } else if (symbol.value == "let*") {
-          // TODO(het): If elements.length is not even, give helpful error
-          Iterable<List<MalType>> pairs(List<MalType> elements) sync* {
-            for (var i = 0; i < elements.length; i += 2) {
-              yield [elements[i], elements[i + 1]];
-            }
+  // ast is a list. todo: indent left.
+  if (ast.elements.isEmpty) {
+    return ast;
+  } else {
+    var list = ast;
+    if (list.elements.first is MalSymbol) {
+      var symbol = list.elements.first as MalSymbol;
+      var args = list.elements.sublist(1);
+      if (symbol.value == "def!") {
+        var key = args.first as MalSymbol;
+        var value = EVAL(args[1], env);
+        env.set(key.value, value);
+        return value;
+      } else if (symbol.value == "let*") {
+        // TODO(het): If elements.length is not even, give helpful error
+        Iterable<List<MalType>> pairs(List<MalType> elements) sync* {
+          for (var i = 0; i < elements.length; i += 2) {
+            yield [elements[i], elements[i + 1]];
           }
-
-          var newEnv = new Env(env);
-          MalIterable bindings = args.first;
-          for (var pair in pairs(bindings.elements)) {
-            MalSymbol key = pair[0];
-            MalType value = EVAL(pair[1], newEnv);
-            newEnv.set(key.value, value);
-          }
-          return EVAL(args[1], newEnv);
         }
+
+        var newEnv = new Env(env);
+        var bindings = args.first as MalIterable;
+        for (var pair in pairs(bindings.elements)) {
+          var key = pair[0] as MalSymbol;
+          var value = EVAL(pair[1], newEnv);
+          newEnv.set(key.value, value);
+        }
+        return EVAL(args[1], newEnv);
       }
-      MalBuiltin f = EVAL(list.elements.first, env);
-      List<MalType> args = list.elements.sublist(1).map((x) => EVAL(x, env)).toList();
-      return f.call(args);
     }
+    var f = EVAL(list.elements.first, env) as MalBuiltin;
+    List<MalType> args = list.elements
+        .sublist(1)
+        .map((x) => EVAL(x, env))
+        .toList();
+    return f.call(args);
+  }
 }
 
 String PRINT(MalType x) => printer.pr_str(x);

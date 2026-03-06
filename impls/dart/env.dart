@@ -1,22 +1,25 @@
 import 'types.dart';
 
 class Env {
-  final Env outer;
+  final Env? outer;
 
   final data = <String, MalType>{};
 
-  Env([this.outer, List<MalSymbol> binds, List<MalType> exprs]) {
+  Env([this.outer, List<MalSymbol>? binds, List<MalType>? exprs]) {
     if (binds == null) {
       assert(exprs == null);
     } else {
-      assert(exprs != null &&
-          (binds.length == exprs.length || binds.contains(new MalSymbol('&'))));
+      assert(
+        exprs != null &&
+            (binds.length == exprs.length ||
+                binds.contains(new MalSymbol('&'))),
+      );
       for (var i = 0; i < binds.length; i++) {
         if (binds[i].value == '&') {
-          set(binds[i + 1].value, new MalList(exprs.sublist(i)));
+          set(binds[i + 1].value, new MalList(exprs!.sublist(i)));
           break;
         }
-        set(binds[i].value, exprs[i]);
+        set(binds[i].value, exprs![i]);
       }
     }
   }
@@ -25,13 +28,13 @@ class Env {
     data[key] = value;
   }
 
-  MalType get(String key) {
+  MalType? get(String key) {
     var value = data[key];
     if (value != null) {
       return value;
     }
     if (outer != null) {
-      return outer.get(key);
+      return outer!.get(key);
     }
     return null;
   }

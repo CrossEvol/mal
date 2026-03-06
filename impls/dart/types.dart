@@ -1,9 +1,10 @@
 import 'dart:collection';
+
 import 'env.dart';
 
 abstract class MalType {
   bool get isMacro => false;
-  MalType meta;
+  MalType? meta;
 
   MalType clone();
 }
@@ -66,13 +67,13 @@ class MalHashMap extends MalType {
   MalHashMap(this.value);
 
   MalHashMap.fromSequence(List<MalType> elements)
-      : value = _mapFromSequence(elements);
+    : value = _mapFromSequence(elements);
 
   static Map<MalType, MalType> _mapFromSequence(List<MalType> elements) {
     var result = <MalType, MalType>{};
 
     var readingKey = true;
-    MalType pendingKey;
+    late MalType pendingKey;
     for (var malType in elements) {
       if (readingKey) {
         if (malType is MalString || malType is MalKeyword) {
@@ -91,7 +92,7 @@ class MalHashMap extends MalType {
 
   bool operator ==(other) {
     if (other is! MalHashMap) return false;
-    var otherMap = (other as MalHashMap).value;
+    var otherMap = (other).value;
     if (otherMap.length != value.length) return false;
     for (var key in value.keys) {
       if (!otherMap.containsKey(key)) return false;
@@ -256,8 +257,12 @@ class MalClosure extends MalCallable {
 
   @override
   MalClosure clone() {
-    var closure =
-        new MalClosure(this.params.toList(), this.ast, this.env, this.func);
+    var closure = new MalClosure(
+      this.params.toList(),
+      this.ast,
+      this.env,
+      this.func,
+    );
     closure.isMacro = this.isMacro;
     return closure;
   }

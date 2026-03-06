@@ -1,9 +1,9 @@
 import 'types.dart';
 
 final malRegExp = new RegExp(
-    r"""[\s,]*(~@|[\[\]{}()'`~^@]|"(?:\\.|[^\\"])*"?|;.*|[^\s\[\]{}('"`,;)]*)""");
-final strRegExp = new RegExp(
-    r"""^"(?:\\.|[^\\"])*"$""");
+  r"""[\s,]*(~@|[\[\]{}()'`~^@]|"(?:\\.|[^\\"])*"?|;.*|[^\s\[\]{}('"`,;)]*)""",
+);
+final strRegExp = new RegExp(r"""^"(?:\\.|[^\\"])*"$""");
 
 class Reader {
   final List<String> tokens;
@@ -11,13 +11,13 @@ class Reader {
 
   Reader(this.tokens);
 
-  String next() {
+  String? next() {
     var token = peek();
     _position++;
     return token;
   }
 
-  String peek() {
+  String? peek() {
     if (_position >= tokens.length) return null;
     return tokens[_position];
   }
@@ -44,6 +44,7 @@ List<String> tokenizer(String code) {
   var matches = malRegExp.allMatches(code);
   return matches
       .map((m) => m.group(1))
+      .whereType<String>()
       .where((token) => token.isNotEmpty && !token.startsWith(';'))
       .toList();
 }
@@ -58,9 +59,9 @@ MalType read_form(Reader reader) {
     '^': 'with-meta',
   };
   const sequenceStarters = const <String, String>{'(': ')', '[': ']', '{': '}'};
-  var token = reader.peek();
+  var token = reader.peek()!;
   if (sequenceStarters.containsKey(token)) {
-    var elements = read_sequence(reader, token, sequenceStarters[token]);
+    var elements = read_sequence(reader, token, sequenceStarters[token]!);
     if (token == '(') {
       return new MalList(elements);
     }
@@ -74,7 +75,7 @@ MalType read_form(Reader reader) {
 
     throw new StateError("Impossible!");
   } else if (macros.containsKey(token)) {
-    var macro = new MalSymbol(macros[token]);
+    var macro = new MalSymbol(macros[token]!);
     reader.next();
     var form = read_form(reader);
     if (token == '^') {
@@ -94,7 +95,7 @@ List<MalType> read_sequence(Reader reader, String open, String close) {
   assert(actualOpen == open);
 
   var elements = <MalType>[];
-  for (var token = reader.peek();; token = reader.peek()) {
+  for (var token = reader.peek(); ; token = reader.peek()) {
     if (token == null) {
       throw new ParseException("expected '$close', got EOF");
     }
@@ -109,9 +110,9 @@ List<MalType> read_sequence(Reader reader, String open, String close) {
 }
 
 MalType read_atom(Reader reader) {
-  var token = reader.next();
+  var token = reader.next()!;
 
-  var intAtom = int.parse(token, onError: (_) => null);
+  var intAtom = int.tryParse(token);
   if (intAtom != null) {
     return new MalInt(intAtom);
   }
@@ -120,8 +121,10 @@ MalType read_atom(Reader reader) {
     var sanitizedToken = token
         // remove surrounding quotes
         .substring(1, token.length - 1)
-        .replaceAllMapped(new RegExp("\\\\(.)"),
-                          (Match m) => m[1] == 'n' ? '\n' : m[1]);
+        .replaceAllMapped(
+          new RegExp("\\\\(.)"),
+          (Match m) => m[1] == 'n' ? '\n' : m[1]!,
+        );
     return new MalString(sanitizedToken);
   }
 

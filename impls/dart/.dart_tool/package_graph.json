@@ -1,0 +1,14 @@
+{
+  "roots": [
+    "mal"
+  ],
+  "packages": [
+    {
+      "name": "mal",
+      "version": "0.0.1",
+      "dependencies": [],
+      "devDependencies": []
+    }
+  ],
+  "configVersion": 1
+}

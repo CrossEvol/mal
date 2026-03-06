@@ -25,10 +25,10 @@ Map<String, MalBuiltin> ns = <String, MalBuiltin>{
     var b = args[1] as MalInt;
     return new MalInt(a.value ~/ b.value);
   }),
-  'list':
-      new MalBuiltin((List<MalType> args) => new MalList(args.toList())),
+  'list': new MalBuiltin((List<MalType> args) => new MalList(args.toList())),
   'list?': new MalBuiltin(
-      (List<MalType> args) => new MalBool(args.single is MalList)),
+    (List<MalType> args) => new MalBool(args.single is MalList),
+  ),
   'empty?': new MalBuiltin((List<MalType> args) {
     var a = args.single as MalIterable;
     return new MalBool(a.elements.isEmpty);
@@ -64,11 +64,13 @@ Map<String, MalBuiltin> ns = <String, MalBuiltin>{
   }),
   'pr-str': new MalBuiltin((List<MalType> args) {
     return new MalString(
-        args.map((a) => pr_str(a, print_readably: true)).join(' '));
+      args.map((a) => pr_str(a, print_readably: true)).join(' '),
+    );
   }),
   'str': new MalBuiltin((List<MalType> args) {
     return new MalString(
-        args.map((a) => pr_str(a, print_readably: false)).join());
+      args.map((a) => pr_str(a, print_readably: false)).join(),
+    );
   }),
   'prn': new MalBuiltin((List<MalType> args) {
     print(args.map((a) => pr_str(a, print_readably: true)).join(' '));
@@ -120,15 +122,16 @@ Map<String, MalBuiltin> ns = <String, MalBuiltin>{
   }),
   'concat': new MalBuiltin((List<MalType> args) {
     var results = <MalType>[];
-    for (MalIterable element in args) {
-      results.addAll(element);
+    for (var element in args) {
+      results.addAll(element as MalIterable);
     }
     return new MalList(results);
   }),
   'vec': new MalBuiltin((List<MalType> args) {
     if (args.length == 1) {
       if (args[0] is MalVector) return args[0];
-      if (args[0] is MalList) return new MalVector((args[0] as MalList).elements);
+      if (args[0] is MalList)
+        return new MalVector((args[0] as MalList).elements);
     }
     throw new MalException(new MalString("vec: wrong arguments"));
   }),
@@ -248,7 +251,8 @@ Map<String, MalBuiltin> ns = <String, MalBuiltin>{
     var elements = args.sublist(1);
     if (collection is MalList) {
       return new MalList(
-          elements.reversed.toList()..addAll(collection.elements));
+        elements.reversed.toList()..addAll(collection.elements),
+      );
     }
     if (collection is MalVector) {
       return new MalVector(collection.elements.toList()..addAll(elements));

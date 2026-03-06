@@ -24,7 +24,7 @@ final Map<String, MalType> replEnv = <String, MalType>{
     var a = args[0] as MalInt;
     var b = args[1] as MalInt;
     return new MalInt(a.value ~/ b.value);
-  })
+  }),
 };
 
 MalType READ(String x) => reader.read_str(x);
@@ -52,21 +52,21 @@ MalType EVAL(MalType ast, Map<String, MalType> env) {
   } else if (ast is MalHashMap) {
     var newMap = new Map<MalType, MalType>.from(ast.value);
     for (var key in newMap.keys) {
-      newMap[key] = EVAL(newMap[key], env);
+      newMap[key] = EVAL(newMap[key]!, env);
     }
     return new MalHashMap(newMap);
   } else {
     return ast;
   }
-    // ast is a list. todo: indent left.
-    var forms = (ast as MalList).elements;
-    if (forms.isEmpty) {
-      return ast;
-    } else {
-      MalBuiltin f = EVAL(forms.first, env);
-      List<MalType> args = forms.sublist(1).map((x) => EVAL(x, env)).toList();
-      return f.call(args);
-    }
+  // ast is a list. todo: indent left.
+  var forms = ast.elements;
+  if (forms.isEmpty) {
+    return ast;
+  } else {
+    var f = (EVAL(forms.first, env)) as MalBuiltin;
+    List<MalType> args = forms.sublist(1).map((x) => EVAL(x, env)).toList();
+    return f.call(args);
+  }
 }
 
 String PRINT(MalType x) => printer.pr_str(x);
