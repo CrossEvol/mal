@@ -3,7 +3,7 @@ const std = @import("std");
 const Env = @import("env.zig").Env;
 const MalError = @import("error.zig").MalError;
 
-fn tagForType(comptime Union: type, comptime T: type) std.meta.Tag(Union) {
+inline fn tagForType(comptime Union: type, comptime T: type) std.meta.Tag(Union) {
     const TagType = std.meta.Tag(Union);
     inline for (std.meta.fields(Union)) |field| {
         if (field.type == T) {
@@ -11,6 +11,58 @@ fn tagForType(comptime Union: type, comptime T: type) std.meta.Tag(Union) {
         }
     }
     @compileError("Type `" ++ @typeName(T) ++ "` is not a field type of `" ++ @typeName(Union) ++ "`");
+}
+
+inline fn asImpl(comptime Curr: type, self: *const Curr, comptime T: type) T {
+    const tag = comptime tagForType(Curr, T);
+    if (std.meta.activeTag(self.*) != tag) unreachable;
+    return @field(self.*, @tagName(tag));
+}
+
+inline fn isImpl(comptime Curr: type, self: *const Curr, comptime T: type) bool {
+    return std.meta.activeTag(self.*) == comptime tagForType(Curr, T);
+}
+
+inline fn intoImpl(
+    comptime Current: type,
+    val: *const Current,
+    comptime path: []const type,
+    comptime T: type, // for zls type inference
+) MalError!T {
+    if (comptime path.len == 0) @compileError("into: path must not be empty");
+
+    comptime if (path[path.len - 1] != T) {
+        @compileError("into: typeB must equal the last type in path, got `" ++
+            @typeName(T) ++ "` vs `" ++ @typeName(path[path.len - 1]) ++ "`");
+    };
+
+    const Next = path[0];
+    const tag = comptime tagForType(Current, Next);
+    if (std.meta.activeTag(val.*) != tag) return MalError.IncompatibleTypeConversion;
+    const next_val: Next = @field(val.*, @tagName(tag));
+
+    return if (comptime path.len == 1)
+        next_val
+    else
+        intoImpl(Next, &next_val, path[1..], T);
+}
+
+inline fn intoCheck(
+    comptime Current: type,
+    val: *const Current,
+    comptime path: []const type,
+) bool {
+    if (comptime path.len == 0) @compileError("into: path must not be empty");
+
+    const Next = path[0];
+    const tag = comptime tagForType(Current, Next);
+    if (std.meta.activeTag(val.*) != tag) return false;
+    const next_val: Next = @field(val.*, @tagName(tag));
+
+    return if (comptime path.len == 1)
+        true
+    else
+        intoCheck(Next, &next_val, path[1..]);
 }
 
 pub const MalType = union(enum) {
@@ -38,51 +90,37 @@ pub const MalType = union(enum) {
     }
 
     pub fn as(self: *const MalType, comptime T: type) !T {
-        const tag = comptime tagForType(MalType, T);
-        if (std.meta.activeTag(self.*) != tag) return MalError.IncompatibleTypeConversion;
-        return @field(self.*, @tagName(tag));
+        return asImpl(MalType, self, T);
     }
 
     pub fn is(self: *const MalType, comptime T: type) bool {
-        return std.meta.activeTag(self.*) == comptime tagForType(MalType, T);
+        return isImpl(MalType, self, T);
+    }
+
+    inline fn into(self: *const MalType, comptime path: []const type, comptime T: type) !T {
+        return try intoImpl(MalType, self, path, T);
+    }
+    inline fn check(self: *const MalType, comptime path: []const type) bool {
+        return intoCheck(MalType, self, path);
     }
 
     pub fn asList(self: *const MalType) !MalList {
-        const iter = (try self.as(MalIterable));
-        return try iter.as(MalList);
+        return self.into(&.{ MalIterable, MalList }, MalList);
     }
 
     pub fn isNil(self: *const MalType) bool {
-        return switch (self.*) {
-            .iterable => |it| switch (it) {
-                .nil => true,
-                else => false,
-            },
-            else => false,
-        };
+        return self.check(&.{ MalIterable, MalNil });
     }
 
     pub fn isList(self: *const MalType) bool {
-        return switch (self.*) {
-            .iterable => |it| switch (it) {
-                .list => true,
-                else => false,
-            },
-            else => false,
-        };
+        return self.check(&.{ MalIterable, MalList });
     }
 
     pub fn isVector(self: *const MalType) bool {
-        return switch (self.*) {
-            .iterable => |it| switch (it) {
-                .vector => true,
-                else => false,
-            },
-            else => false,
-        };
+        return self.check(&.{ MalIterable, MalVector });
     }
 
-    pub fn isIterable(self: *const MalType) bool {
+    pub fn isSequential(self: *const MalType) bool {
         return switch (self.*) {
             .iterable => |it| switch (it) {
                 .list, .vector => true,
@@ -284,13 +322,11 @@ pub const MalIterable = union(enum) {
     nil: MalNil,
 
     pub fn as(self: *const MalIterable, comptime T: type) !T {
-        const tag = comptime tagForType(MalIterable, T);
-        if (std.meta.activeTag(self.*) != tag) return MalError.IncompatibleTypeConversion;
-        return @field(self.*, @tagName(tag));
+        return asImpl(MalIterable, self, T);
     }
 
     pub fn is(self: *const MalIterable, comptime T: type) bool {
-        return std.meta.activeTag(self.*) == comptime tagForType(MalIterable, T);
+        return isImpl(MalIterable, self, T);
     }
 
     pub fn length(self: *const MalIterable) usize {
@@ -721,13 +757,11 @@ pub const MalCallable = union(enum) {
     closure: MalClosure,
 
     pub fn as(self: *const MalBuiltin, comptime T: type) !T {
-        const tag = comptime tagForType(MalBuiltin, T);
-        if (std.meta.activeTag(self.*) != tag) return MalError.IncompatibleTypeConversion;
-        return @field(self.*, @tagName(tag));
+        return asImpl(MalCallable, self, T);
     }
 
     pub fn is(self: *const MalClosure, comptime T: type) bool {
-        return std.meta.activeTag(self.*) == comptime tagForType(MalClosure, T);
+        return isImpl(MalCallable, self, T);
     }
 
     pub fn call(self: *MalCallable, allocator: std.mem.Allocator, args: []MalType) !MalType {

@@ -624,7 +624,7 @@ fn vals(allocator: std.mem.Allocator, args: []MalType) MalError!MalType {
 fn @"sequential?"(allocator: std.mem.Allocator, args: []MalType) MalError!MalType {
     _ = allocator;
 
-    const b = args[0].isIterable();
+    const b = args[0].isSequential();
 
     return MalType.newBool(b);
 }
