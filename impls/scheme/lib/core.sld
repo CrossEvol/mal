@@ -29,52 +29,6 @@
   (let ((items (map (lambda (arg) (pr-str arg print-readably)) args)))
     (string-intersperse items sep)))
 
-(define (mal-equal? a b)
-  (let ((a-type (and (mal-object? a) (mal-type a)))
-        (a-value (and (mal-object? a) (mal-value a)))
-        (b-type (and (mal-object? b) (mal-type b)))
-        (b-value (and (mal-object? b) (mal-value b))))
-    (cond
-     ((or (not a-type) (not b-type))
-      mal-false)
-     ((and (memq a-type '(list vector))
-           (memq b-type '(list vector)))
-      (mal-list-equal? (->list a-value) (->list b-value)))
-     ((and (eq? a-type 'map) (eq? b-type 'map))
-      (mal-map-equal? a-value b-value))
-     (else
-      (and (eq? a-type b-type)
-           (equal? a-value b-value))))))
-
-(define (mal-list-equal? as bs)
-  (let loop ((as as)
-             (bs bs))
-    (cond
-     ((and (null? as) (null? bs)) #t)
-     ((or (null? as) (null? bs)) #f)
-     (else
-      (if (mal-equal? (car as) (car bs))
-          (loop (cdr as) (cdr bs))
-          #f)))))
-
-(define (mal-map-ref key m . default)
-  (if (pair? default)
-      (alist-ref key m mal-equal? (car default))
-      (alist-ref key m mal-equal?)))
-
-(define (mal-map-equal? as bs)
-  (if (not (= (length as) (length bs)))
-      #f
-      (let loop ((as as))
-        (if (pair? as)
-            (let* ((item (car as))
-                   (key (car item))
-                   (value (cdr item)))
-              (if (mal-equal? (mal-map-ref key bs) value)
-                  (loop (cdr as))
-                  #f))
-            #t))))
-
 (define (mal-map-dissoc m keys)
   (let loop ((items m)
              (acc '()))
@@ -260,7 +214,7 @@
     (vector? . ,(lambda (x) (coerce (mal-instance-of? x 'vector))))
     (vector . ,(lambda args (mal-vector (list->vector args))))
     (map? . ,(lambda (x) (coerce (mal-instance-of? x 'map))))
-    (hash-map . ,(lambda args (mal-map (list->alist args))))
+    (hash-map . ,(lambda args (mal-map (list->alist args (lambda (x k) (mal-equal? x k))))))
     (sequential? . ,(lambda (x) (coerce (and (mal-object? x)
                                              (memq (mal-type x)
                                                    '(list vector))))))
@@ -277,14 +231,19 @@
 
     (with-meta . ,(lambda (x meta)
                     (cond
-                     ((mal-object? x)
-                      (make-mal-object (mal-type x) (mal-value x) meta))
                      ((func? x)
                       (let ((func (make-func (func-ast x) (func-params x)
                                              (func-env x) (func-fn x))))
                         (func-macro?-set! func #f)
                         (func-meta-set! func meta)
                         func))
+                     ((mal-object? x)
+                      (make-mal-object (mal-type x) (mal-value x) meta))
+                     ((procedure? x)
+                      (let ((f (make-func #f #f #f x)))
+                        (display (func? f))
+                        (func-meta-set! f meta)
+                        f))
                      (else
                       (error "unsupported type")))))
     (meta . ,(lambda (x) (cond

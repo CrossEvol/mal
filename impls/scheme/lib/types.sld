@@ -5,12 +5,15 @@
         mal-number mal-string mal-symbol mal-keyword
         mal-list mal-vector mal-map mal-atom
 
-        make-func func? func-ast func-params func-env
+        make-func func-copy func? func-ast func-params func-env
         func-fn func-macro? func-macro?-set! func-meta func-meta-set!
 
-        mal-instance-of?)
+        mal-instance-of? 
+
+        mal-equal? mal-list-equal? mal-map-ref mal-map-equal?)
 
 (import (scheme base))
+(import (lib util))
 
 (begin
 
@@ -59,11 +62,65 @@
   (macro? func-macro? func-macro?-set!)
   (meta func-meta func-meta-set!))
 
+(define (func-copy f)
+  (%make-func (func-ast f)
+              (func-params f)
+              (func-env f)
+              (func-fn f)
+              (func-macro? f)
+              (func-meta f)))
+
 (define (make-func ast params env fn)
   (%make-func ast params env fn #f #f))
 
 (define (mal-instance-of? x type)
   (and (mal-object? x) (eq? (mal-type x) type)))
+
+(define (mal-equal? a b)
+  (let ((a-type (and (mal-object? a) (mal-type a)))
+        (a-value (and (mal-object? a) (mal-value a)))
+        (b-type (and (mal-object? b) (mal-type b)))
+        (b-value (and (mal-object? b) (mal-value b))))
+    (cond
+     ((or (not a-type) (not b-type))
+      mal-false)
+     ((and (memq a-type '(list vector))
+           (memq b-type '(list vector)))
+      (mal-list-equal? (->list a-value) (->list b-value)))
+     ((and (eq? a-type 'map) (eq? b-type 'map))
+      (mal-map-equal? a-value b-value))
+     (else
+      (and (eq? a-type b-type)
+           (equal? a-value b-value))))))
+
+(define (mal-list-equal? as bs)
+  (let loop ((as as)
+             (bs bs))
+    (cond
+     ((and (null? as) (null? bs)) #t)
+     ((or (null? as) (null? bs)) #f)
+     (else
+      (if (mal-equal? (car as) (car bs))
+          (loop (cdr as) (cdr bs))
+          #f)))))
+
+(define (mal-map-ref key m . default)
+  (if (pair? default)
+      (alist-ref key m mal-equal? (car default))
+      (alist-ref key m mal-equal?)))
+
+(define (mal-map-equal? as bs)
+  (if (not (= (length as) (length bs)))
+      #f
+      (let loop ((as as))
+        (if (pair? as)
+            (let* ((item (car as))
+                   (key (car item))
+                   (value (cdr item)))
+              (if (mal-equal? (mal-map-ref key bs) value)
+                  (loop (cdr as))
+                  #f))
+            #t))))
 
 )
 

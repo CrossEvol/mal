@@ -17,8 +17,6 @@
    ((func? ast)
     "#<func>")
    (else
-    (if (procedure? ast)
-        "#<fn>"
         (let* ((type (and (mal-object? ast) (mal-type ast)))
                (value (and (mal-object? ast) (mal-value ast))))
           (case type
@@ -47,7 +45,7 @@
             ((vector) (pr-list (vector->list value) "[" "]" print-readably))
             ((map) (pr-list (alist->list value) "{" "}" print-readably))
             ((atom) (string-append "(atom " (pr-str value print-readably) ")"))
-            (else (error "unknown type"))))))))
+            (else (error "unknown type")))))))
 
 (define (pr-list items starter ender print-readably)
   (call-with-output-string

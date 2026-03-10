@@ -65,7 +65,7 @@
                          value))
                       ((defmacro!)
                        (let ((symbol (mal-value (cadr items)))
-                             (value (EVAL (list-ref items 2) env)))
+                             (value (func-copy (EVAL (list-ref items 2) env))))
                          (when (func? value)
                            (func-macro?-set! value #t))
                          (env-set env symbol value)

@@ -124,7 +124,7 @@
    ((equal? token "[")
     (read-list reader "]" (lambda (items) (mal-vector (list->vector items)))))
    ((equal? token "{")
-    (read-list reader "}" (lambda (items) (mal-map (list->alist items)))))
+    (read-list reader "}" (lambda (items) (mal-map (list->alist items (lambda (x k) (mal-equal? x k)))))))
    (else
     (read-atom reader)))))
 
@@ -134,8 +134,9 @@
 
 (define (read-meta reader)
   (next reader) ; pop macro token
-  (let ((form (read-form reader)))
-    (mal-list (list (mal-symbol 'with-meta) (read-form reader) form))))
+  (let ((form (read-form reader))
+        (meta (read-form reader)))
+    (mal-list (list (mal-symbol 'with-meta) meta form))))
 
 (define (read-list reader ender proc)
   (next reader) ; pop list start
@@ -177,7 +178,7 @@
       (mal-keyword (string->symbol (string-copy token 1))))
      (else
       (mal-symbol (string->symbol token))))))
-
+      
 )
 
 )
