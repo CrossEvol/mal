@@ -233,7 +233,7 @@ pub const MalType = union(enum) {
             },
             .hashmap => |mal_hashmap| std.hash.autoHash(&hasher, @intFromPtr(&mal_hashmap)),
             .int => |mal_int| std.hash.autoHash(&hasher, mal_int.value),
-            .symbol => |mal_symbol| std.hash.autoHash(&hasher, @intFromPtr(&mal_symbol)),
+            .symbol => |mal_symbol| std.hash.autoHash(&hasher, mal_symbol.hash_code),
             .keyword => |mal_keyword| std.hash.autoHash(&hasher, mal_keyword.hash_code),
             .string => |mal_string| std.hash.autoHash(&hasher, mal_string.hash_code),
             .bool => |mal_bool| std.hash.autoHash(&hasher, mal_bool.value),
@@ -492,15 +492,11 @@ pub const MalHashMap = struct {
         MalTypeContext,
         std.hash_map.default_max_load_percentage,
     )) !MalHashMap {
-        var new_value = std.HashMap(MalType, MalType, MalTypeContext, std.hash_map.default_max_load_percentage).init(allocator);
-        var iter = value.iterator();
-        while (iter.next()) |entry| {
-            try new_value.put(entry.key_ptr.*, entry.value_ptr.*);
-        }
+        const cloned_value = try value.clone();
 
         return .{
             .allocator = allocator,
-            .value = new_value,
+            .value = cloned_value,
             .meta = null,
         };
     }
@@ -539,7 +535,10 @@ pub const MalHashMap = struct {
                     if (self.value.get(key.*) == null or o.value.get(key.*) == null) {
                         return false;
                     }
-                    return self.value.get(key.*).?.eql(o.value.get(key.*).?);
+
+                    const v1 = self.value.get(key.*).?;
+                    const v2 = o.value.get(key.*).?;
+                    if (!v1.eql(v2)) return false;
                 }
                 return true;
             },
@@ -548,12 +547,8 @@ pub const MalHashMap = struct {
     }
 
     pub fn clone(self: *const MalHashMap) !MalHashMap {
-        var mal_hash_map = try init(self.allocator, self.value);
-
-        var iter = self.value.iterator();
-        while (iter.next()) |entry| {
-            try mal_hash_map.value.put(entry.key_ptr.*, entry.value_ptr.*);
-        }
+        const cloned_value = try self.value.clone();
+        const mal_hash_map = try init(self.allocator, cloned_value);
 
         return mal_hash_map;
     }
