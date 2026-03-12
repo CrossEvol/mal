@@ -1,6 +1,7 @@
-mod core;
-mod env;
-mod printer;
-mod reader;
-mod readline;
-mod types;
+pub mod core;
+pub mod env;
+pub mod error;
+pub mod printer;
+pub mod reader;
+pub mod readline;
+pub mod types;
