@@ -199,6 +199,10 @@ pub fn mal_func(f: impl Fn(&[MalObject]) -> MalResult + 'static) -> MalFunction 
     MalFunction(Rc::new(f))
 }
 
+pub fn mal_procedure(f: impl Fn(&[MalObject]) -> MalResult + 'static) -> MalObject {
+    MalObject::Procedure(MalProcedure::new(MalFunction(Rc::new(f))))
+}
+
 impl MalFunction {
     pub fn call(&self, args: &[MalObject]) -> MalResult {
         self.0(args)
@@ -241,7 +245,7 @@ impl MalProcedure {
 pub struct MalClosure {
     ast: Box<MalObject>,
     params: Vec<MalObject>,
-    env: Rc<Env>,
+    env: Env,
     pub func: MalFunction,
     pub is_macro: bool,
     pub meta: Option<Box<MalObject>>,
@@ -251,7 +255,7 @@ impl MalClosure {
     pub fn new(
         ast: Box<MalObject>,
         params: Vec<MalObject>,
-        env: Rc<Env>,
+        env: Env,
         func: MalFunction,
         is_macro: bool,
     ) -> Self {

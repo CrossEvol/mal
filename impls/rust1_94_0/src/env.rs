@@ -1,17 +1,8 @@
 use crate::types::{MalList, MalObject, MalSymbol};
-use std::{collections::HashMap, hash::Hash, rc::Rc};
+use std::{cell::RefCell, collections::HashMap, hash::Hash, rc::Rc};
 
-#[derive(Eq, Debug)]
-pub struct Env {
-    outer: Option<Rc<Env>>,
-    data: HashMap<MalSymbol, MalObject>,
-}
-
-impl PartialEq for Env {
-    fn eq(&self, other: &Self) -> bool {
-        std::ptr::eq(self, other)
-    }
-}
+#[derive(PartialEq, Eq, Debug, Clone)]
+pub struct Env(Rc<RefCell<EnvInner>>);
 
 impl Hash for Env {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
@@ -20,15 +11,45 @@ impl Hash for Env {
 }
 
 impl Env {
-    fn empty_env(outer: Option<Rc<Env>>) -> Self {
+    pub fn new(
+        outer: Option<Env>,
+        binds: Option<Vec<MalSymbol>>,
+        exprs: Option<Vec<MalObject>>,
+    ) -> Self {
+        Self(Rc::new(RefCell::new(EnvInner::new(outer, binds, exprs))))
+    }
+
+    pub fn set(&mut self, key: MalSymbol, value: MalObject) -> Option<MalObject> {
+        self.0.borrow_mut().set(key, value)
+    }
+
+    pub fn get(&self, key: &MalSymbol) -> Option<MalObject> {
+        self.0.borrow().get(key)
+    }
+}
+
+#[derive(Eq, Debug)]
+struct EnvInner {
+    outer: Option<Env>,
+    data: HashMap<MalSymbol, MalObject>,
+}
+
+impl PartialEq for EnvInner {
+    fn eq(&self, other: &Self) -> bool {
+        std::ptr::eq(self, other)
+    }
+}
+
+impl EnvInner {
+    fn empty_env(outer: Option<Env>) -> Self {
         Self {
             outer,
             data: HashMap::new(),
         }
     }
 
-    pub fn new(
-        outer: Option<Rc<Env>>,
+    fn new(
+        outer: Option<Env>,
         binds: Option<Vec<MalSymbol>>,
         exprs: Option<Vec<MalObject>>,
     ) -> Self {
@@ -43,7 +64,7 @@ impl Env {
                     match (bind, expr) {
                         (Some(key), Some(value)) => {
                             if key.name.to_string() == "&" {
-                                bind = bind_iter.next();
+                                bind_iter.next(); // skip '&'
                                 let exprs: Vec<MalObject> = expr_iter.collect();
                                 env.set(key, MalObject::List(MalList::new(exprs)));
                                 break;
@@ -62,11 +83,11 @@ impl Env {
         }
     }
 
-    pub fn set(&mut self, key: MalSymbol, value: MalObject) -> Option<MalObject> {
+    fn set(&mut self, key: MalSymbol, value: MalObject) -> Option<MalObject> {
         self.data.insert(key, value)
     }
 
-    pub fn get(&self, key: &MalSymbol) -> Option<MalObject> {
+    fn get(&self, key: &MalSymbol) -> Option<MalObject> {
         if self.data.contains_key(key) {
             self.data.get(key).cloned()
         } else if let Some(outer) = &self.outer {
