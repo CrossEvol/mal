@@ -2,6 +2,7 @@ use crate::env::Env;
 use crate::error::MalError;
 use std::cell::RefCell;
 use std::collections::{HashMap, hash_map::DefaultHasher};
+use std::fmt::Debug;
 use std::hash::{Hash, Hasher};
 use std::rc::Rc;
 
@@ -191,7 +192,38 @@ impl Hash for MalAtom {
     }
 }
 
-pub type MalFunction = fn(&[MalObject]) -> MalResult;
+#[derive(Clone)]
+pub struct MalFunction(pub Rc<dyn Fn(&[MalObject]) -> MalResult + 'static>);
+
+pub fn mal_func(f: impl Fn(&[MalObject]) -> MalResult + 'static) -> MalFunction {
+    MalFunction(Rc::new(f))
+}
+
+impl MalFunction {
+    pub fn call(&self, args: &[MalObject]) -> MalResult {
+        self.0(args)
+    }
+}
+
+impl Debug for MalFunction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("MalFunction").finish()
+    }
+}
+
+impl PartialEq for MalFunction {
+    fn eq(&self, other: &Self) -> bool {
+        Rc::ptr_eq(&self.0, &other.0)
+    }
+}
+
+impl Eq for MalFunction {}
+
+impl Hash for MalFunction {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        (Rc::as_ptr(&self.0) as *const () as usize).hash(state)
+    }
+}
 
 #[derive(PartialEq, Eq, Hash, Clone, Debug)]
 pub struct MalProcedure {

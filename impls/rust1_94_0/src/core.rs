@@ -1,10 +1,4 @@
-use std::{
-    cell::{Ref, RefCell},
-    collections::{HashMap, VecDeque},
-    fs::read_to_string,
-    rc::Rc,
-    time::SystemTime,
-};
+use std::{fs::read_to_string, time::SystemTime};
 
 use crate::{
     error::MalError,
@@ -14,6 +8,7 @@ use crate::{
     types::{
         MalAtom, MalClosure, MalFalse, MalFunction, MalHashmap, MalKeyword, MalList, MalNil,
         MalNumber, MalObject, MalProcedure, MalResult, MalString, MalSymbol, MalTrue, MalVector,
+        mal_func,
     },
 };
 
@@ -288,7 +283,7 @@ fn swap(args: &[MalObject]) -> MalResult {
             let mut args = Vec::with_capacity(rest.len() + 1);
             args.push(atom.item.borrow().clone());
             args.extend_from_slice(rest);
-            let value = func(&args)?;
+            let value = func.call(&args)?;
             *atom.item.borrow_mut() = value.clone();
             Ok(value.clone())
         }
@@ -437,7 +432,7 @@ fn apply(args: &[MalObject]) -> MalResult {
         ] => {
             let args_len = args.len();
             if args_len == 1 {
-                func(&vec![args[0].clone()])
+                func.call(&vec![args[0].clone()])
             } else {
                 let last = args.last().unwrap();
                 let mut args = args
@@ -453,7 +448,7 @@ fn apply(args: &[MalObject]) -> MalResult {
                 } else {
                     return Err(MalError::InvalidArguments);
                 }
-                func(&args)
+                func.call(&args)
             }
         }
         _ => Err(MalError::InvalidArguments),
@@ -469,7 +464,7 @@ fn map(args: &[MalObject]) -> MalResult {
         ] => items
             .iter()
             .try_fold(Vec::new(), |mut acc, arg| {
-                let item = func(&vec![arg.clone()])?;
+                let item = func.call(&vec![arg.clone()])?;
                 acc.push(item);
                 Ok(acc)
             })
@@ -782,7 +777,7 @@ fn meta(args: &[MalObject]) -> MalResult {
     }
 }
 
-pub fn ns() -> Vec<(&'static str, MalFunction)> {
+pub fn ns() -> Vec<(&'static str, fn(&[MalObject]) -> MalResult)> {
     vec![
         ("+", add),
         ("-", sub),
