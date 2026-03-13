@@ -1,4 +1,7 @@
-use crate::types::{MalList, MalObject, MalSymbol};
+use crate::{
+    error::MalError,
+    types::{MalList, MalObject, MalSymbol},
+};
 use std::{cell::RefCell, collections::HashMap, hash::Hash, rc::Rc};
 
 #[derive(PartialEq, Eq, Debug, Clone)]
@@ -15,8 +18,10 @@ impl Env {
         outer: Option<Env>,
         binds: Option<Vec<MalSymbol>>,
         exprs: Option<Vec<MalObject>>,
-    ) -> Self {
-        Self(Rc::new(RefCell::new(EnvInner::new(outer, binds, exprs))))
+    ) -> Result<Self, MalError> {
+        Ok(Self(Rc::new(RefCell::new(EnvInner::new(
+            outer, binds, exprs,
+        )?))))
     }
 
     pub fn set(&mut self, key: MalSymbol, value: MalObject) -> Option<MalObject> {
@@ -52,7 +57,7 @@ impl EnvInner {
         outer: Option<Env>,
         binds: Option<Vec<MalSymbol>>,
         exprs: Option<Vec<MalObject>>,
-    ) -> Self {
+    ) -> Result<Self, MalError> {
         match (binds, exprs) {
             (Some(binds), Some(exprs)) => {
                 let mut env = Self::empty_env(outer);
@@ -61,15 +66,26 @@ impl EnvInner {
                 let mut bind = bind_iter.next();
                 let mut expr = expr_iter.next();
                 loop {
-                    match (bind, expr) {
-                        (Some(key), Some(value)) => {
+                    // TODO: can it be more idiomatic ?
+                    match (bind, expr.clone()) {
+                        (Some(key), value) => {
                             if key.name.to_string() == "&" {
-                                bind_iter.next(); // skip '&'
-                                let exprs: Vec<MalObject> = expr_iter.collect();
-                                env.set(key, MalObject::List(MalList::new(exprs)));
+                                let key = bind_iter.next().unwrap(); // skip '&'
+                                let mut rest = Vec::new();
+                                if let Some(expr) = expr {
+                                    rest.push(expr);
+                                }
+                                while let Some(expr) = expr_iter.next() {
+                                    rest.push(expr);
+                                }
+                                env.set(key, MalObject::List(MalList::new(rest)));
                                 break;
                             } else {
-                                env.set(key, value);
+                                if let Some(value) = value {
+                                    env.set(key, value);
+                                } else {
+                                    return Err(MalError::InvalidArguments);
+                                }
                                 bind = bind_iter.next();
                                 expr = expr_iter.next();
                             }
@@ -77,9 +93,9 @@ impl EnvInner {
                         _ => break,
                     }
                 }
-                env
+                Ok(env)
             }
-            _ => Self::empty_env(outer),
+            _ => Ok(Self::empty_env(outer)),
         }
     }
 

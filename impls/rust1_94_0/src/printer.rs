@@ -14,7 +14,14 @@ pub fn pr_str(ast: &MalObject, print_readably: bool) -> String {
             if print_readably {
                 let mut sb = String::new();
                 sb.push('"');
-                string.chars().for_each(|c| sb.push(c));
+                for c in string.chars() {
+                    match c {
+                        '\\' => sb.push_str("\\\\"),
+                        '"' => sb.push_str("\\\""),
+                        '\n' => sb.push_str("\\n"),
+                        c => sb.push(c),
+                    }
+                }
                 sb.push('"');
                 sb
             } else {

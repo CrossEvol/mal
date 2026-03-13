@@ -6,9 +6,8 @@ use crate::{
     reader::read_str,
     readline as rl,
     types::{
-        MalAtom, MalClosure, MalFalse, MalFunction, MalHashmap, MalKeyword, MalList, MalNil,
-        MalNumber, MalObject, MalProcedure, MalResult, MalString, MalSymbol, MalTrue, MalVector,
-        mal_func,
+        MalAtom, MalClosure, MalFalse, MalHashmap, MalKeyword, MalList, MalNil, MalNumber,
+        MalObject, MalProcedure, MalResult, MalString, MalSymbol, MalTrue, MalVector,
     },
 };
 
@@ -93,6 +92,7 @@ fn count(args: &[MalObject]) -> MalResult {
                 items.len().try_into().unwrap(),
             )))
         }
+        [_] => Ok(MalObject::Number(MalNumber::new(0))),
         _ => Err(MalError::InvalidArguments),
     }
 }
@@ -180,7 +180,7 @@ fn pr_str(args: &[MalObject]) -> MalResult {
 }
 
 fn str(args: &[MalObject]) -> MalResult {
-    let s = to_printed_string(args, false, " ");
+    let s = to_printed_string(args, false, "");
     Ok(MalObject::String(MalString::new(&s)))
 }
 

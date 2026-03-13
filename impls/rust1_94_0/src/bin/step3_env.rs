@@ -7,13 +7,13 @@ use rust1_94_0::{
     reader::read_str,
     readline as rl,
     types::{
-        MalHashmap, MalList, MalNumber, MalObject, MalProcedure, MalResult, MalSymbol, MalVector,
-        mal_procedure,
+        MalClosure, MalHashmap, MalList, MalNumber, MalObject, MalProcedure, MalResult, MalSymbol,
+        MalVector, mal_procedure,
     },
 };
 
-fn repl_env() -> Env {
-    let mut env = Env::new(None, None, None);
+fn repl_env() -> Result<Env, MalError> {
+    let mut env = Env::new(None, None, None)?;
     env.set(
         MalSymbol::new("+"),
         mal_procedure(|args: &[MalObject]| match args {
@@ -54,7 +54,7 @@ fn repl_env() -> Env {
             _ => Err(MalError::InvalidArguments),
         }),
     );
-    env
+    Ok(env)
 }
 
 fn read(input: &str) -> MalResult {
@@ -109,7 +109,7 @@ fn eval(ast: &MalObject, env: &mut Env) -> MalResult {
                 if binds.len() % 2 != 0 {
                     return Err(MalError::RuntimeError("unbalanced list".to_string()));
                 }
-                let mut new_env = Env::new(Some(env.clone()), None, None);
+                let mut new_env = Env::new(Some(env.clone()), None, None)?;
                 for entry in binds.chunks_exact(2) {
                     let (key, value) = (entry[0].clone(), entry[1].clone());
                     let value = eval(&value, &mut new_env)?;
@@ -119,20 +119,19 @@ fn eval(ast: &MalObject, env: &mut Env) -> MalResult {
                 }
                 eval(form, &mut new_env)
             }
-            [MalObject::Symbol(key), ops @ ..] => {
-                let op = env.get(key);
-                if let Some(MalObject::Procedure(MalProcedure { func: op, .. })) = op {
-                    let ops = ops.iter().try_fold(Vec::new(), |mut acc, arg| {
-                        let item = eval(arg, env)?;
-                        acc.push(item);
-                        Ok(acc)
-                    })?;
+            [op, ops @ ..] => {
+                let op = eval(op, env)?;
+                let ops = ops.iter().try_fold(Vec::new(), |mut acc, arg| {
+                    let item = eval(arg, env)?;
+                    acc.push(item);
+                    Ok(acc)
+                })?;
+                if let MalObject::Procedure(MalProcedure { func: op, .. })
+                | MalObject::Closure(MalClosure { func: op, .. }) = op
+                {
                     op.call(&ops)
                 } else {
-                    Err(MalError::RuntimeError(format!(
-                        "Error: '{}' not found",
-                        key.name
-                    )))
+                    Ok(ast.clone())
                 }
             }
             _ => Ok(ast.clone()),
@@ -149,8 +148,8 @@ fn rep(input: &str, env: &mut Env) -> Result<String, MalError> {
     Ok(print(&eval(&read(input)?, env)?))
 }
 
-fn main() {
-    let mut env = repl_env();
+fn main() -> Result<(), MalError> {
+    let mut env = repl_env()?;
 
     loop {
         let input = rl::readline("user> ").unwrap();

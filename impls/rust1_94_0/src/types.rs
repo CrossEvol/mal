@@ -8,7 +8,7 @@ use std::rc::Rc;
 
 pub type MalResult = Result<MalObject, MalError>;
 
-#[derive(PartialEq, Eq, Hash, Clone, Debug)]
+#[derive(Hash, Clone, Debug)]
 pub enum MalObject {
     True(MalTrue),
     False(MalFalse),
@@ -24,6 +24,31 @@ pub enum MalObject {
     Procedure(MalProcedure),
     Closure(MalClosure),
 }
+
+impl PartialEq for MalObject {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::True(l0), Self::True(r0)) => l0 == r0,
+            (Self::False(l0), Self::False(r0)) => l0 == r0,
+            (Self::Nil(l0), Self::Nil(r0)) => l0 == r0,
+            (Self::Number(l0), Self::Number(r0)) => l0 == r0,
+            (Self::String(l0), Self::String(r0)) => l0 == r0,
+            (Self::Symbol(l0), Self::Symbol(r0)) => l0 == r0,
+            (Self::Keyword(l0), Self::Keyword(r0)) => l0 == r0,
+            (
+                Self::List(MalList { items: l0, .. }) | Self::Vector(MalVector { items: l0, .. }),
+                Self::List(MalList { items: r0, .. }) | Self::Vector(MalVector { items: r0, .. }),
+            ) => l0 == r0,
+            (Self::Hashmap(l0), Self::Hashmap(r0)) => l0 == r0,
+            (Self::Atom(l0), Self::Atom(r0)) => l0 == r0,
+            (Self::Procedure(l0), Self::Procedure(r0)) => l0 == r0,
+            (Self::Closure(l0), Self::Closure(r0)) => l0 == r0,
+            _ => false,
+        }
+    }
+}
+
+impl Eq for MalObject {}
 
 #[derive(PartialEq, Eq, Hash, Clone, Debug)]
 pub struct MalTrue {
@@ -139,11 +164,30 @@ impl MalVector {
     }
 }
 
-#[derive(PartialEq, Eq, Clone, Debug)]
+#[derive(Clone, Debug)]
 pub struct MalHashmap {
     pub items: HashMap<MalObject, MalObject>,
     pub meta: Option<Box<MalObject>>,
 }
+
+impl PartialEq for MalHashmap {
+    fn eq(&self, other: &Self) -> bool {
+        if self.items.len() != other.items.len() {
+            return false;
+        }
+        for (k, v) in self.items.iter() {
+            if !other.items.contains_key(k) {
+                return false;
+            }
+            if other.items.get(k) != Some(v) {
+                return false;
+            }
+        }
+        true
+    }
+}
+
+impl Eq for MalHashmap {}
 
 impl MalHashmap {
     pub fn new(items: HashMap<MalObject, MalObject>) -> Self {

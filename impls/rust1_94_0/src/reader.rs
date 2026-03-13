@@ -120,8 +120,16 @@ impl Reader {
                     }
                     if c == '\\' {
                         if let Some(next) = chars.next() {
-                            s.push('\\');
-                            s.push(next);
+                            match next {
+                                '\\' => s.push('\\'),
+                                '"' => s.push('"'),
+                                'n' => s.push('\n'),
+                                _ => {
+                                    // For other escape sequences, keep them as-is
+                                    s.push('\\');
+                                    s.push(next);
+                                }
+                            }
                         } else {
                             return Err(MalError::ParseError(format!("unbalanced")));
                         }
@@ -179,22 +187,32 @@ pub fn tokenizer(input: &str) -> Vec<String> {
                 tokens.push("~@".to_string());
             } else if ch == '"' {
                 let mut token = String::new();
-                token.push(ch);
-                while char_iter.peek().is_some_and(|c| *c != '"') {
-                    if char_iter.peek().is_some_and(|c| *c == '\\') {
-                        let c = char_iter.next().unwrap();
-                        token.push(c);
-                        let c = char_iter.next().unwrap();
-                        token.push(c);
-                    } else {
-                        let c = char_iter.next().unwrap();
-                        token.push(c);
+                token.push('"');
+
+                while let Some(&ch) = char_iter.peek() {
+                    match ch {
+                        '"' => {
+                            char_iter.next();
+                            token.push('"');
+                            break;
+                        }
+                        '\\' => {
+                            char_iter.next();
+                            token.push('\\');
+
+                            if let Some(c) = char_iter.next() {
+                                token.push(c);
+                            } else {
+                                break;
+                            }
+                        }
+                        _ => {
+                            char_iter.next();
+                            token.push(ch);
+                        }
                     }
                 }
-                if char_iter.peek().is_some_and(|c| *c == '"') {
-                    char_iter.next();
-                    token.push('"');
-                }
+
                 tokens.push(token);
             } else if ch == ';' {
                 while char_iter.peek().is_some_and(|c| *c != '\n') {
