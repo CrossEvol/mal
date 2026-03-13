@@ -287,9 +287,9 @@ impl MalProcedure {
 
 #[derive(PartialEq, Eq, Hash, Clone, Debug)]
 pub struct MalClosure {
-    ast: Box<MalObject>,
-    params: Vec<MalObject>,
-    env: Env,
+    pub ast: Box<MalObject>,
+    pub params: Vec<MalObject>,
+    pub env: Env,
     pub func: MalFunction,
     pub is_macro: bool,
     pub meta: Option<Box<MalObject>>,

@@ -1,4 +1,4 @@
-use std::{fs::read_to_string, time::SystemTime};
+use std::{collections::HashMap, fs::read_to_string, time::SystemTime};
 
 use crate::{
     error::MalError,
@@ -113,7 +113,7 @@ fn less(args: &[MalObject]) -> MalResult {
     }
 }
 
-fn lessEqual(args: &[MalObject]) -> MalResult {
+fn less_equal(args: &[MalObject]) -> MalResult {
     match args {
         &[
             MalObject::Number(MalNumber { n: a, .. }),
@@ -145,7 +145,7 @@ fn greater(args: &[MalObject]) -> MalResult {
     }
 }
 
-fn greaterEqual(args: &[MalObject]) -> MalResult {
+fn greater_equal(args: &[MalObject]) -> MalResult {
     match args {
         &[
             MalObject::Number(MalNumber { n: a, .. }),
@@ -232,7 +232,7 @@ fn readline(args: &[MalObject]) -> MalResult {
     }
 }
 
-fn time_ms(args: &[MalObject]) -> MalResult {
+fn time_ms(_args: &[MalObject]) -> MalResult {
     let ms = SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
         .unwrap()
@@ -522,7 +522,12 @@ fn symbolp(args: &[MalObject]) -> MalResult {
 }
 
 fn symbol(args: &[MalObject]) -> MalResult {
-    todo!()
+    match args {
+        [MalObject::String(MalString { string, .. })] => {
+            Ok(MalObject::Symbol(MalSymbol::new(&string)))
+        }
+        _ => Err(MalError::InvalidArguments),
+    }
 }
 
 fn keywordp(args: &[MalObject]) -> MalResult {
@@ -534,7 +539,13 @@ fn keywordp(args: &[MalObject]) -> MalResult {
 }
 
 fn keyword(args: &[MalObject]) -> MalResult {
-    todo!()
+    match args {
+        [MalObject::Keyword(_)] => Ok(args[0].clone()),
+        [MalObject::String(MalString { string, .. })] => {
+            Ok(MalObject::Keyword(MalKeyword::new(string)))
+        }
+        _ => Err(MalError::InvalidArguments),
+    }
 }
 
 fn vectorp(args: &[MalObject]) -> MalResult {
@@ -546,7 +557,12 @@ fn vectorp(args: &[MalObject]) -> MalResult {
 }
 
 fn vector(args: &[MalObject]) -> MalResult {
-    todo!()
+    match args {
+        [MalObject::List(MalList { items, .. })] => {
+            Ok(MalObject::Vector(MalVector::new(items.to_vec())))
+        }
+        _ => Err(MalError::InvalidArguments),
+    }
 }
 
 fn mapp(args: &[MalObject]) -> MalResult {
@@ -558,7 +574,13 @@ fn mapp(args: &[MalObject]) -> MalResult {
 }
 
 fn hash_map(args: &[MalObject]) -> MalResult {
-    todo!()
+    args.chunks_exact(2)
+        .try_fold(HashMap::new(), |mut m, entry| {
+            let (k, v) = (entry[0].clone(), entry[1].clone());
+            m.insert(k, v);
+            Ok(m)
+        })
+        .map(|m| MalObject::Hashmap(MalHashmap::new(m)))
 }
 
 fn sequentialp(args: &[MalObject]) -> MalResult {
@@ -789,9 +811,9 @@ pub fn ns() -> Vec<(&'static str, fn(&[MalObject]) -> MalResult)> {
         ("count", count),
         ("=", equal),
         ("<", less),
-        ("<=", lessEqual),
+        ("<=", less_equal),
         (">", greater),
-        (">=", greaterEqual),
+        (">=", greater_equal),
         ("pr-str", pr_str),
         ("str", str),
         ("prn", prn),
