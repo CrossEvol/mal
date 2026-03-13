@@ -46,8 +46,7 @@ impl Reader {
                 "@" => self.read_macro("deref"),
                 "^" => self.read_meta(),
                 "(" => self.read_list(")", |items| Ok(MalObject::List(MalList::new(items)))),
-                "{" => self.read_list("}", |items| Ok(MalObject::Vector(MalVector::new(items)))),
-                "[" => self.read_list("]", |items| {
+                "{" => self.read_list("}", |items| {
                     if items.len() % 2 != 0 {
                         return Err(MalError::ParseError("unbalanced list".to_string()));
                     }
@@ -59,6 +58,7 @@ impl Reader {
 
                     Ok(MalObject::Hashmap(MalHashmap::new(items)))
                 }),
+                "[" => self.read_list("]", |items| Ok(MalObject::Vector(MalVector::new(items)))),
                 _ => self.read_atom(),
             }
         } else {
@@ -76,8 +76,8 @@ impl Reader {
     pub fn read_meta(&mut self) -> MalResult {
         self.next(); // skip macro token
         let form = self.read_form()?;
-        let meta = self.read_meta()?;
-        let with_meta = MalObject::Symbol(MalSymbol::new("'with-meta"));
+        let meta = self.read_form()?;
+        let with_meta = MalObject::Symbol(MalSymbol::new("with-meta"));
         Ok(MalObject::List(MalList::new(vec![with_meta, meta, form])))
     }
 
@@ -87,15 +87,14 @@ impl Reader {
         while self.peek().is_some_and(|token| token != ender) {
             items.push(self.read_form()?);
         }
-        if self.peek().is_none() {
-            // (error (str "expected '" ender "', got EOF")))
-            // panic!("expect ender, got EOF");
+        if self.peek().is_some_and(|token| token == ender) {
+            self.next(); // skip list end
+            proc(items)
+        } else {
             Err(MalError::ParseError(format!(
                 "expected '{}', got EOF",
                 ender
             )))
-        } else {
-            proc(items)
         }
     }
 
@@ -112,8 +111,26 @@ impl Reader {
                 let i = token.parse::<i64>().unwrap();
                 Ok(MalObject::Number(MalNumber::new(i)))
             } else if token.chars().nth(0).is_some_and(|c| c == '"') {
-                // TODO: how to deal with string here ?
-                Ok(MalObject::String(MalString::new(&token)))
+                let mut chars = token.chars().skip(1); // skip start quote
+
+                let mut s = String::new();
+                while let Some(c) = chars.next() {
+                    if c == '"' {
+                        return Ok(MalObject::String(MalString::new(&s)));
+                    }
+                    if c == '\\' {
+                        if let Some(next) = chars.next() {
+                            s.push('\\');
+                            s.push(next);
+                        } else {
+                            return Err(MalError::ParseError(format!("unbalanced")));
+                        }
+                    } else {
+                        s.push(c);
+                    }
+                }
+
+                return Err(MalError::ParseError(format!("EOF")));
             } else if token.chars().nth(0).is_some_and(|c| c == ':') {
                 let s: String = token.chars().skip(1).collect();
                 Ok(MalObject::Keyword(MalKeyword::new(&s)))
@@ -136,6 +153,18 @@ const SPECIAL_CHARS: &[char] = &['[', ']', '{', '}', '(', ')', '\'', '`', '~', '
 
 const NON_WORD_CHARS: &[char] = &['[', ']', '{', '}', '(', ')', '\'', '"', '`', ';'];
 
+fn is_whitespace_char(ch: &char) -> bool {
+    ch.is_whitespace() || *ch == ','
+}
+
+fn is_special_char(ch: &char) -> bool {
+    SPECIAL_CHARS.contains(ch)
+}
+
+fn is_non_word_char(ch: &char) -> bool {
+    is_whitespace_char(ch) || NON_WORD_CHARS.contains(ch)
+}
+
 pub fn tokenizer(input: &str) -> Vec<String> {
     let mut tokens: Vec<String> = Vec::new();
 
@@ -143,36 +172,44 @@ pub fn tokenizer(input: &str) -> Vec<String> {
     let mut char = char_iter.next();
     loop {
         if let Some(ch) = char {
-            if ch.is_whitespace() {
-                //
+            if is_whitespace_char(&ch) {
+                // skip
             } else if ch == '~' && char_iter.peek().is_some_and(|c| *c == '@') {
-                tokens.push("~@".to_string());
                 char_iter.next();
+                tokens.push("~@".to_string());
             } else if ch == '"' {
                 let mut token = String::new();
                 token.push(ch);
                 while char_iter.peek().is_some_and(|c| *c != '"') {
-                    let c = char_iter.next().unwrap();
-                    token.push(c);
+                    if char_iter.peek().is_some_and(|c| *c == '\\') {
+                        let c = char_iter.next().unwrap();
+                        token.push(c);
+                        let c = char_iter.next().unwrap();
+                        token.push(c);
+                    } else {
+                        let c = char_iter.next().unwrap();
+                        token.push(c);
+                    }
                 }
-                char_iter.next(); // skip closing quote
+                if char_iter.peek().is_some_and(|c| *c == '"') {
+                    char_iter.next();
+                    token.push('"');
+                }
                 tokens.push(token);
             } else if ch == ';' {
                 while char_iter.peek().is_some_and(|c| *c != '\n') {
                     char_iter.next();
                 }
                 char_iter.next(); // skip newline
-            } else if SPECIAL_CHARS.contains(&ch) {
+            } else if is_special_char(&ch) {
                 tokens.push(ch.to_string());
             } else {
                 let mut token = String::new();
                 token.push(ch);
-                while char_iter
-                    .peek()
-                    .is_some_and(|c| !NON_WORD_CHARS.contains(c))
-                {
+                while char_iter.peek().is_some_and(|c| !is_non_word_char(&c)) {
                     token.push(char_iter.next().unwrap());
                 }
+
                 tokens.push(token);
             }
             char = char_iter.next();
