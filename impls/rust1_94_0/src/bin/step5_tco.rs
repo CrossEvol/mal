@@ -26,15 +26,15 @@ fn read(input: &str) -> MalResult {
 }
 
 fn eval(ast: &MalObject, env: &mut Env) -> MalResult {
-    let mut ast = ast;
-    let mut env = env;
+    let mut ast = ast.clone();
+    let mut env = env.clone();
     loop {
         let dbgeval = env.get(&MalSymbol::new("DEBUG-EVAL"));
         if dbgeval.is_some() {
-            println!("EVAL: {}", pr_str(ast, true));
+            println!("EVAL: {}", pr_str(&ast, true));
         }
 
-        match ast {
+        match &ast {
             MalObject::Symbol(key) => {
                 return if let Some(value) = env.get(key) {
                     Ok(value)
@@ -46,7 +46,7 @@ fn eval(ast: &MalObject, env: &mut Env) -> MalResult {
                 return items
                     .iter()
                     .try_fold(Vec::new(), |mut acc, arg| {
-                        let item = eval(arg, env)?;
+                        let item = eval(arg, &mut env)?;
                         acc.push(item);
                         Ok(acc)
                     })
@@ -57,7 +57,7 @@ fn eval(ast: &MalObject, env: &mut Env) -> MalResult {
                     .iter()
                     .try_fold(HashMap::new(), |mut acc, entry| {
                         let (key, value) = (entry.0.clone(), entry.1.clone());
-                        let value = eval(&value, env)?;
+                        let value = eval(&value, &mut env)?;
                         acc.insert(key, value);
                         Ok(acc)
                     })
@@ -67,7 +67,7 @@ fn eval(ast: &MalObject, env: &mut Env) -> MalResult {
                 [MalObject::Symbol(key), MalObject::Symbol(symbol), value]
                     if key.name.to_string() == "def!" =>
                 {
-                    let value = eval(value, env)?;
+                    let value = eval(value, &mut env)?;
                     env.set(symbol.clone(), value.clone());
                     return Ok(value);
                 }
@@ -88,16 +88,16 @@ fn eval(ast: &MalObject, env: &mut Env) -> MalResult {
                             new_env.set(symbol, value);
                         }
                     }
-                    ast = &form;
-                    env = &mut new_env;
+                    ast = form.clone();
+                    env = new_env;
                     continue;
                 }
                 [MalObject::Symbol(symbol), forms @ ..] if symbol.name.to_string() == "do" => {
                     if let Some((last_form, forms)) = forms.split_last() {
                         for form in forms {
-                            eval(form, env)?;
+                            eval(form, &mut env)?;
                         }
-                        ast = &last_form;
+                        ast = last_form.clone();
                         continue;
                     } else {
                         return Ok(MalObject::Nil(MalNil::new()));
@@ -106,12 +106,12 @@ fn eval(ast: &MalObject, env: &mut Env) -> MalResult {
                 [MalObject::Symbol(symbol), condition, branches @ ..]
                     if symbol.name.to_string() == "if" =>
                 {
-                    let condition = eval(condition, env)?;
+                    let condition = eval(condition, &mut env)?;
                     match condition {
                         MalObject::False(_) | MalObject::Nil(_) => match branches {
                             [_] => return Ok(MalObject::Nil(MalNil::new())),
                             [_, else_branch] => {
-                                ast = else_branch;
+                                ast = else_branch.clone();
                                 continue;
                             }
                             _ => {
@@ -122,7 +122,7 @@ fn eval(ast: &MalObject, env: &mut Env) -> MalResult {
                         },
                         _ => match branches {
                             [then_branch] | [then_branch, ..] => {
-                                ast = then_branch;
+                                ast = then_branch.clone();
                                 continue;
                             }
                             _ => {
@@ -173,9 +173,9 @@ fn eval(ast: &MalObject, env: &mut Env) -> MalResult {
                     return Ok(MalObject::Closure(clos));
                 }
                 [op, ops @ ..] => {
-                    let op = eval(op, env)?;
+                    let op = eval(op, &mut env)?;
                     let ops = ops.iter().try_fold(Vec::new(), |mut acc, arg| {
-                        let item = eval(arg, env)?;
+                        let item = eval(arg, &mut env)?;
                         acc.push(item);
                         Ok(acc)
                     })?;
@@ -196,10 +196,9 @@ fn eval(ast: &MalObject, env: &mut Env) -> MalResult {
                                     _ => None,
                                 })
                                 .collect();
-                            let mut new_env =
-                                Env::new(Some(outer.clone()), Some(binds), Some(ops))?;
-                            ast = &func_ast;
-                            env = &mut new_env;
+                            let new_env = Env::new(Some(outer.clone()), Some(binds), Some(ops))?;
+                            ast = *func_ast;
+                            env = new_env;
                             continue;
                         }
                         _ => return Err(MalError::RuntimeError("bad!".to_string())),

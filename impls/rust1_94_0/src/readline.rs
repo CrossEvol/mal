@@ -7,5 +7,5 @@ pub fn readline(prompt: &str) -> Result<String> {
     }
     let input = rl.readline(prompt)?;
     let _ = rl.save_history("history.txt");
-    Ok((input))
+    Ok(input)
 }
