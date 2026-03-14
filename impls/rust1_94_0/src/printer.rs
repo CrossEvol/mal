@@ -33,7 +33,9 @@ pub fn pr_str(ast: &MalObject, print_readably: bool) -> String {
         MalObject::List(MalList { items, .. }) => pr_list(items, '(', ')', print_readably),
         MalObject::Vector(MalVector { items, .. }) => pr_list(items, '[', ']', print_readably),
         MalObject::Hashmap(MalHashmap { items, .. }) => pr_map(items, '{', '}', print_readably),
-        MalObject::Atom(MalAtom { item, .. }) => pr_str(&item.borrow(), print_readably),
+        MalObject::Atom(MalAtom { item, .. }) => {
+            format!("(atom {})", pr_str(&item.borrow(), print_readably))
+        }
         MalObject::Procedure(_) => "#<fn>".to_string(),
         MalObject::Closure(_) => "#<func>".to_string(),
     }
