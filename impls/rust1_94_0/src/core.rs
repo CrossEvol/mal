@@ -438,13 +438,18 @@ fn apply(args: &[MalObject]) -> MalResult {
         ] => {
             let args_len = args.len();
             if args_len == 1 {
-                func.call(&vec![args[0].clone()])
+                if let MalObject::List(MalList { items, .. })
+                | MalObject::Vector(MalVector { items, .. }) = args[0].clone()
+                {
+                    func.call(&items)
+                } else {
+                    Err(MalError::InvalidArguments)
+                }
             } else {
                 let last = args.last().unwrap();
                 let mut args = args
                     .iter()
                     .take(args_len - 1)
-                    .skip(1)
                     .map(|arg| arg.clone())
                     .collect::<Vec<_>>();
                 if let MalObject::List(MalList { items, .. })
@@ -563,12 +568,12 @@ fn vectorp(args: &[MalObject]) -> MalResult {
 }
 
 fn vector(args: &[MalObject]) -> MalResult {
-    match args {
-        [MalObject::List(MalList { items, .. })] => {
-            Ok(MalObject::Vector(MalVector::new(items.to_vec())))
-        }
-        _ => Err(MalError::InvalidArguments),
-    }
+    args.iter()
+        .try_fold(Vec::new(), |mut items, arg| {
+            items.push(arg.clone());
+            Ok(items)
+        })
+        .map(|items| MalObject::Vector(MalVector::new(items)))
 }
 
 fn mapp(args: &[MalObject]) -> MalResult {
@@ -672,6 +677,7 @@ fn get(args: &[MalObject]) -> MalResult {
                 Ok(MalObject::Nil(MalNil::new()))
             }
         }
+        [_, _] => Ok(MalObject::Nil(MalNil::new())),
         _ => Err(MalError::InvalidArguments),
     }
 }
