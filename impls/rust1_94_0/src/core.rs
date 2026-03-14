@@ -385,7 +385,7 @@ fn conj(args: &[MalObject]) -> MalResult {
             let mut args = args.to_vec();
             args.reverse();
             args.extend_from_slice(items);
-            Ok(MalObject::Vector(MalVector::new(args)))
+            Ok(MalObject::List(MalList::new(args)))
         }
         [_, ..] => Err(MalError::RuntimeError(
             "invalid collection type".to_string(),
