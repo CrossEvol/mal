@@ -293,9 +293,15 @@ fn swap(args: &[MalObject]) -> MalResult {
 
 fn cons(args: &[MalObject]) -> MalResult {
     match args {
-        [x, xs] => Ok(MalObject::List(MalList::new(
-            [x.clone(), xs.clone()].to_vec(),
-        ))),
+        [
+            x,
+            MalObject::List(MalList { items: xs, .. })
+            | MalObject::Vector(MalVector { items: xs, .. }),
+        ] => {
+            let mut vec: Vec<MalObject> = vec![x.clone()];
+            vec.extend_from_slice(xs);
+            Ok(MalObject::List(MalList::new(vec)))
+        }
         _ => Err(MalError::InvalidArguments),
     }
 }
@@ -303,7 +309,7 @@ fn cons(args: &[MalObject]) -> MalResult {
 fn concat(args: &[MalObject]) -> MalResult {
     args.iter()
         .try_fold(Vec::new(), |mut acc, arg| match arg {
-            MalObject::List(MalList { items, .. }) => {
+            MalObject::List(MalList { items, .. }) | MalObject::Vector(MalVector { items, .. }) => {
                 acc.extend_from_slice(items);
                 Ok(acc)
             }
