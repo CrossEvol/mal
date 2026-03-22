@@ -1,0 +1,5 @@
+#!/bin/sh
+STEP=${STEP:-stepA_mal}
+IMPL_DIR=$(dirname "$0")
+exec dune exec --root "$IMPL_DIR" "bin/$STEP.exe" -- "${@}" 2>/dev/null || \
+exec dune exec --root "$IMPL_DIR" "bin/$STEP.bc" -- "${@}"
