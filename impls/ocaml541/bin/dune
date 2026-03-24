@@ -1,5 +1,6 @@
 (executables
  (names
+  main
   step0_repl
   step1_read_print
   step2_eval
@@ -11,4 +12,4 @@
   step8_macros
   step9_try
   stepA_mal)
- (libraries ocaml541 str unix))
+ (libraries ocaml541 str unix readline))
