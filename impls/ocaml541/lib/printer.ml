@@ -18,7 +18,8 @@ let rec pr_str mal_obj print_readably : string =
   | Bool true -> "true"
   | Bool false -> "false"
   | Int i -> string_of_int i
-  | Str s -> if print_readably then "\"" ^ s ^ "\"" else s
+  | Str s ->
+      if print_readably then Format.asprintf {|"%s"|} (escape_str s) else s
   | Sym s -> s
   | Kwd s -> ":" ^ s
   | List (l, _) -> pr_seq l print_readably "(" ")" " "

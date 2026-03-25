@@ -59,7 +59,7 @@ and read_seq rdr end_token =
   let open Result.Syntax in
   let rec loop acc =
     let* token = peek rdr in
-    if token == end_token then (
+    if token = end_token then (
       ignore (next rdr);
       Ok (List.rev acc))
     else
@@ -95,7 +95,7 @@ and read_form rdr =
       let _ = next rdr in
       let* meta = read_form rdr in
       let* form = read_form rdr in
-      Ok (mal_list [ Sym "quasiquote"; form; meta ])
+      Ok (mal_list [ Sym "with-meta"; form; meta ])
   | "@" ->
       let _ = next rdr in
       let* form = read_form rdr in
@@ -107,7 +107,7 @@ and read_form rdr =
   | "]" -> error "unexpected ']'"
   | "[" ->
       let* seq = read_seq rdr "]" in
-      Ok (list seq)
+      Ok (vector seq)
   | "}" -> error "unexpected '}'"
   | "{" ->
       let* seq = read_seq rdr "}" in
