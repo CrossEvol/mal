@@ -24,7 +24,7 @@ let symbol = function
   | [ Str s ] -> Ok (Sym s)
   | _ -> error "illegal symbol call"
 
-let readline p =
+let readline' p =
   match readline ~prompt:p () with Some s -> Ok (Str s) | None -> Ok Nil
 
 let slurp f =
@@ -229,7 +229,7 @@ let with_meta = function
 
 let ns =
   [
-    ("=", func (fun a -> Ok (Bool (List.nth a 0 = List.nth a 1))));
+    ("=", func (fun a -> Ok (Bool (mal_equal (List.nth a 0) (List.nth a 1)))));
     ("throw", func (fun a -> Error (List.hd a)));
     ("nil?", func (fn_is_type (function Nil -> true | _ -> false)));
     ("true?", func (fn_is_type (function Bool true -> true | _ -> false)));
@@ -253,14 +253,14 @@ let ns =
     ("str", func (fun a -> Ok (Str (pr_seq a false "" "" ""))));
     ( "prn",
       func (fun a ->
-          Printf.printf "%s" (pr_seq a true "" "" " ");
+          print_endline (Format.asprintf "%s" (pr_seq a true "" "" " "));
           Ok Nil) );
     ( "println",
       func (fun a ->
-          Printf.printf "%s" (pr_seq a false "" "" " ");
+          print_endline (Format.asprintf "%s" (pr_seq a false "" "" " "));
           Ok Nil) );
     ("read-string", func (fn_str read_str));
-    ("readline", func (fn_str readline));
+    ("readline", func (fn_str readline'));
     ("slurp", func (fn_str slurp));
     ("<", func (fn_t_int_int (fun x -> Bool x) (fun a b -> a < b)));
     ("<=", func (fn_t_int_int (fun x -> Bool x) (fun a b -> a <= b)));

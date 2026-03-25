@@ -23,6 +23,28 @@ let list seq = List (seq, Nil)
 let vector seq = Vector (seq, Nil)
 let func f = Func (f, Nil, false)
 
+let rec mal_equal a b =
+  match (a, b) with
+  | List (xs, _), List (ys, _)
+  | List (xs, _), Vector (ys, _)
+  | Vector (xs, _), List (ys, _)
+  | Vector (xs, _), Vector (ys, _) ->
+      List.equal mal_equal xs ys
+  | Hash (xs, _), Hash (ys, _) -> xs = ys
+  | _ -> a = b
+
+and hash_equal xs ys =
+  if Hashtbl.length xs <> Hashtbl.length ys then false
+  else
+    Hashtbl.fold
+      (fun k vx acc ->
+        if not acc then false
+        else
+          match Hashtbl.find_opt ys k with
+          | Some vy -> mal_equal vx vy
+          | None -> false)
+      xs true
+
 let wrap_map_key k =
   match k with
   | Str s -> Ok s
