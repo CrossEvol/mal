@@ -11,11 +11,22 @@ type malVal =
   | Vector of malVal list * malVal
   | Hash of (string, malVal) Hashtbl.t * malVal
   | Func of (malFn * malVal * bool) (* fn -> meta -> macro *)
+  | MalFunc of funcStruct
   | Atom of malVal ref
 
 and malArgs = malVal list
 and malRet = (malVal, malVal) result
 and malFn = malArgs -> malRet
+
+and funcStruct = {
+  ast : malVal;
+  env : env;
+  params : malVal;
+  is_macro : bool;
+  meta : malVal;
+}
+
+and env = { outer : env option; data : (string, malVal) Hashtbl.t }
 
 let error (s : string) = Error (Str s)
 let mal_list args = List (args, Nil)

@@ -1,8 +1,6 @@
 open Types
 open Result.Syntax
 
-type env = { outer : env option; data : (string, malVal) Hashtbl.t }
-
 let env_new outer = { outer; data = Hashtbl.create 8 }
 
 let env_sets env k v =
