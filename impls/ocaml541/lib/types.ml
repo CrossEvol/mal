@@ -42,7 +42,7 @@ let rec mal_equal a b =
   | Vector (xs, _), List (ys, _)
   | Vector (xs, _), Vector (ys, _) ->
       List.equal mal_equal xs ys
-  | Hash (xs, _), Hash (ys, _) -> xs = ys
+  | Hash (xs, _), Hash (ys, _) -> hash_equal xs ys
   | _ -> a = b
 
 and hash_equal xs ys =
@@ -57,15 +57,18 @@ and hash_equal xs ys =
           | None -> false)
       xs true
 
+let keyword_prefix = "\u{029E}"
+
 let wrap_map_key k =
   match k with
   | Str s -> Ok s
-  | Kwd s -> Ok (":" ^ s)
-  | _ -> error "key is not string"
+  | Kwd s -> Ok (keyword_prefix ^ s)
+  | _ -> error "key is not string or keyword"
 
 let unwrap_map_key s =
-  if String.length s > 0 && s.[0] == ':' then
-    Kwd (String.sub s 1 (String.length s - 1))
+  if String.starts_with ~prefix:keyword_prefix s then
+    let prefix_len = String.length keyword_prefix in
+    Kwd (String.sub s prefix_len (String.length s - prefix_len))
   else Str s
 
 let _assoc hm kvs =

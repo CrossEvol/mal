@@ -49,7 +49,7 @@ let get = function
   | _ -> error "illegal get args"
 
 let assoc = function
-  | Hash (hm, _) :: kvs -> _assoc hm kvs
+  | Hash (hm, _) :: kvs -> _assoc (Hashtbl.copy hm) kvs
   | _ -> error "assoc on non-Hash Map"
 
 let dissoc = function
@@ -135,18 +135,18 @@ let apply = function
       match last with
       | List (v, _) | Vector (v, _) -> (
           match f with
-          | Func (f, _) -> f (rest @ v)
+          | Func (fn, _) | MalFunc { fn; _ } -> fn (rest @ v)
           | _ -> error "apply: first arg not a function")
       | _ -> error "apply called with non-seq")
   | _ -> error "apply requires at least 2 args"
 
 let map = function
-  | [ Func (f, _); (List (v, _) | Vector (v, _)) ] ->
+  | [ (Func (fn, _) | MalFunc { fn; _ }); (List (v, _) | Vector (v, _)) ] ->
       let* res =
         List.fold_left
           (fun acc x ->
             let* acc = acc in
-            let* mv = f [ x ] in
+            let* mv = fn [ x ] in
             Ok (mv :: acc))
           (Ok []) v
       in
