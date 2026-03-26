@@ -135,15 +135,19 @@ let () =
     {|(def! load-file (fn* (f) (eval (read-string (str "(do " (slurp f) "\nnil)")))))|}
     env;
 
-  let args = Sys.argv in
-  env_sets env "*ARGV*"
-    (Array.to_list args |> List.tl |> List.map (fun arg -> Str arg) |> list);
-
-  if Array.length Sys.argv > 2 then (
+  if Array.length Sys.argv > 1 then (
+    let args = Sys.argv in
     let arg1 = Sys.argv.(1) in
+    env_sets env "*ARGV*"
+      (Array.to_list args |> List.tl |> List.tl
+      |> List.map (fun arg -> Str arg)
+      |> list);
     re (Format.asprintf {|(load-file "%s")|} arg1) env;
     exit 0)
   else
+    let args = Sys.argv in
+    env_sets env "*ARGV*"
+      (Array.to_list args |> List.tl |> List.map (fun arg -> Str arg) |> list);
     let rec loop () =
       let result = readline ~prompt:"user> " () in
       match result with

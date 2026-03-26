@@ -214,7 +214,13 @@ let swap_bang = function
   | _ -> error "attempt to swap! a non-Atom"
 
 let get_meta = function
-  | [ (List (_, meta) | Vector (_, meta) | Hash (_, meta) | Func (_, meta)) ] ->
+  | [
+      ( List (_, meta)
+      | Vector (_, meta)
+      | Hash (_, meta)
+      | Func (_, meta)
+      | MalFunc { meta; _ } );
+    ] ->
       Ok meta
   | _ -> error "meta not supported by type"
 
@@ -223,6 +229,7 @@ let with_meta = function
   | [ Vector (v, _); meta ] -> Ok (Vector (v, meta))
   | [ Hash (hm, _); meta ] -> Ok (Hash (hm, meta))
   | [ Func (f, _); meta ] -> Ok (Func (f, meta))
+  | [ MalFunc f; meta ] -> Ok (MalFunc { f with meta })
   | _ -> error "with-meta not supported by type"
 
 let ns =
@@ -234,6 +241,7 @@ let ns =
     ("false?", func (fn_is_type (function Bool false -> true | _ -> false)));
     ("symbol", func symbol);
     ("symbol?", func (fn_is_type (function Sym _ -> true | _ -> false)));
+    ("string?", func (fn_is_type (function Str _ -> true | _ -> false)));
     ("keyword", func keyword);
     ("keyword?", func (fn_is_type (function Kwd _ -> true | _ -> false)));
     ("number?", func (fn_is_type (function Int _ -> true | _ -> false)));
