@@ -135,13 +135,13 @@ let apply = function
       match last with
       | List (v, _) | Vector (v, _) -> (
           match f with
-          | Func (f, _, _) -> f (rest @ v)
+          | Func (f, _) -> f (rest @ v)
           | _ -> error "apply: first arg not a function")
       | _ -> error "apply called with non-seq")
   | _ -> error "apply requires at least 2 args"
 
 let map = function
-  | [ Func (f, _, _); (List (v, _) | Vector (v, _)) ] ->
+  | [ Func (f, _); (List (v, _) | Vector (v, _)) ] ->
       let* res =
         List.fold_left
           (fun acc x ->
@@ -206,16 +206,15 @@ let reset_bang = function
   | _ -> error "attempt to reset! a non-Atom"
 
 let swap_bang = function
-  | Atom atm :: Func (fn, _, _) :: fargs
-  | Atom atm :: MalFunc { fn; _ } :: fargs ->
+  | Atom atm :: Func (fn, _) :: fargs | Atom atm :: MalFunc { fn; _ } :: fargs
+    ->
       let* result = fn (!atm :: fargs) in
       atm.contents <- result;
       Ok result
   | _ -> error "attempt to swap! a non-Atom"
 
 let get_meta = function
-  | [ (List (_, meta) | Vector (_, meta) | Hash (_, meta) | Func (_, meta, _)) ]
-    ->
+  | [ (List (_, meta) | Vector (_, meta) | Hash (_, meta) | Func (_, meta)) ] ->
       Ok meta
   | _ -> error "meta not supported by type"
 
@@ -223,7 +222,7 @@ let with_meta = function
   | [ List (l, _); meta ] -> Ok (List (l, meta))
   | [ Vector (v, _); meta ] -> Ok (Vector (v, meta))
   | [ Hash (hm, _); meta ] -> Ok (Hash (hm, meta))
-  | [ Func (f, _, _); meta ] -> Ok (Func (f, meta, false))
+  | [ Func (f, _); meta ] -> Ok (Func (f, meta))
   | _ -> error "with-meta not supported by type"
 
 let ns =
@@ -241,12 +240,13 @@ let ns =
     ( "fn?",
       func
         (fn_is_type (function
-          | Func (_, _, macro) when not macro -> true
+          | MalFunc { is_macro; _ } when not is_macro -> true
+          | Func _ -> true
           | _ -> false)) );
     ( "macro?",
       func
         (fn_is_type (function
-          | Func (_, _, macro) when macro -> true
+          | MalFunc { is_macro; _ } when is_macro -> true
           | _ -> false)) );
     ("pr-str", func (fun a -> Ok (Str (pr_seq a true "" "" " "))));
     ("str", func (fun a -> Ok (Str (pr_seq a false "" "" ""))));

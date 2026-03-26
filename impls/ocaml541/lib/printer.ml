@@ -30,7 +30,7 @@ let rec pr_str mal_obj print_readably : string =
         |> List.concat_map (fun (k, v) -> [ unwrap_map_key k; v ])
       in
       pr_seq l print_readably "{" "}" " "
-  | Func (_, _, _) -> "#<builtin>"
+  | Func (_, _) -> "#<builtin>"
   | MalFunc { ast; params; _ } ->
       Format.asprintf "(fn* %s %s)" (pr_str params true) (pr_str ast true)
   | Atom a -> Format.asprintf "(atom %s)" (pr_str !a true)

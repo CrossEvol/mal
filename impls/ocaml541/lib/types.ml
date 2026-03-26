@@ -10,7 +10,7 @@ type malVal =
   | List of malVal list * malVal
   | Vector of malVal list * malVal
   | Hash of (string, malVal) Hashtbl.t * malVal
-  | Func of (malFn * malVal * bool) (* fn -> meta -> macro *)
+  | Func of (malFn * malVal) (* fn -> meta *)
   | MalFunc of funcStruct
   | Atom of malVal ref
 
@@ -33,7 +33,7 @@ let error (s : string) = Error (Str s)
 let mal_list args = List (args, Nil)
 let list seq = List (seq, Nil)
 let vector seq = Vector (seq, Nil)
-let func f = Func (f, Nil, false)
+let func f = Func (f, Nil)
 
 let rec mal_equal a b =
   match (a, b) with

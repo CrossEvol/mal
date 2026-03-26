@@ -16,7 +16,7 @@ let traverse f lst =
 
 let apply f args =
   match f with
-  | Func (f, _, _) -> f args
+  | Func (f, _) -> f args
   | _ -> error "attempt to call non-function"
 
 let read str = read_str str

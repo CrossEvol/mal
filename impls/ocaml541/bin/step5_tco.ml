@@ -102,7 +102,7 @@ let rec eval ast env =
             let* f = eval a0 env in
             let* args = traverse eval' (List.tl l) in
             match f with
-            | Func (f, _, _) -> f args
+            | Func (f, _) -> f args
             | MalFunc { env; params; ast; _ } ->
                 let* sub_env = env_bind env params args in
                 eval ast sub_env

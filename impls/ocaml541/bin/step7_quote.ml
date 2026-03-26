@@ -129,7 +129,7 @@ let rec eval ast env =
             let* f = eval a0 env in
             let* args = traverse eval' (List.tl l) in
             match f with
-            | Func (f, _, _) -> f args
+            | Func (f, _) -> f args
             | MalFunc { fn; _ } -> fn args
             | _ -> error "attempt to call non-function"))
   | _ -> Ok ast
