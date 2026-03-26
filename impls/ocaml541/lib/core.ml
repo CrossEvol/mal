@@ -208,8 +208,9 @@ let reset_bang = function
   | _ -> error "attempt to reset! a non-Atom"
 
 let swap_bang = function
-  | Atom atm :: Func (f, _, _) :: fargs ->
-      let* result = f fargs in
+  | Atom atm :: Func (fn, _, _) :: fargs
+  | Atom atm :: MalFunc { fn; _ } :: fargs ->
+      let* result = fn (!atm :: fargs) in
       atm.contents <- result;
       Ok result
   | _ -> error "attempt to swap! a non-Atom"

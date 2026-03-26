@@ -24,6 +24,7 @@ and funcStruct = {
   params : malVal;
   is_macro : bool;
   meta : malVal;
+  fn : malFn;
 }
 
 and env = { outer : env option; data : (string, malVal) Hashtbl.t }

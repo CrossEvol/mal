@@ -93,7 +93,11 @@ let rec eval ast env =
         | Sym a0sym when a0sym = "fn*" ->
             let params = List.nth l 1 in
             let ast = List.nth l 2 in
-            Ok (MalFunc { ast; env; params; is_macro = false; meta = Nil })
+            let fn args =
+              let* sub_env = env_bind env params args in
+              eval ast sub_env
+            in
+            Ok (MalFunc { ast; env; params; is_macro = false; meta = Nil; fn })
         | _ -> (
             let* f = eval a0 env in
             let* args = traverse eval' (List.tl l) in
