@@ -94,19 +94,17 @@ let cons = function
   | [ a0; (List (v, _) | Vector (v, _)) ] -> Ok (List ([ a0 ] @ v, Nil))
   | _ -> error "cons expects seq as second arg"
 
-let concat = function
-  | [ (List (v, _) | Vector (v, _)) ] ->
-      let* l =
-        List.fold_left
-          (fun acc x ->
-            let* new_v = acc in
-            match x with
-            | List (v, _) | Vector (v, _) -> Ok (new_v @ v)
-            | _ -> error "non-seq passed to concat")
-          (Ok []) v
-      in
-      Ok (List (l, Nil))
-  | _ -> error "non-seq passed to concat"
+let concat args =
+  let* l =
+    List.fold_left
+      (fun acc x ->
+        let* new_v = acc in
+        match x with
+        | List (v, _) | Vector (v, _) -> Ok (List.rev_append v new_v)
+        | _ -> error "non-seq passed to concat")
+      (Ok []) args
+  in
+  Ok (List (List.rev l, Nil))
 
 let nth = function
   | [ (List (seq, _) | Vector (seq, _)); Int idx ] -> (
